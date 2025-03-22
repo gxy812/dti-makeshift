@@ -13,6 +13,16 @@
 #include <BLEServer.h>
 #include <BLEUtils.h>
 
+struct MotorPins {
+    const int en;
+    const int in1;
+    const int in2;
+};
+
+// TODO: Pin choices
+MotorPins motorL{3, 4, 5};
+MotorPins motorR{6, 7, 8};
+
 BLEServer *pServer = nullptr;
 BLECharacteristic *pDirectionCharacterisitic = nullptr;
 bool deviceConnected = false;
@@ -21,6 +31,8 @@ bool oldDeviceConnected = false;
 // TODO : Generate UUIDS
 const char *SERVICE_UUID = "";
 const char *DIRECTION_CHARACTERISTIC_UUID = "";
+
+const int MOTOR_SPEED = 255;
 
 enum Direction { None, Forward, TurnLeft, TurnRight, Backward };
 
@@ -46,24 +58,39 @@ class CharacteristicCallbacks : public BLECharacteristicCallbacks {
         if (value.length() <= 0)
             return;
         auto receivedValue = static_cast<int>(value[0]);
-        // TODO: Motor integration
+        // TODO: Motor integration and max PWM value
         switch (receivedValue) {
         case None:
-            // motors to 0
+            setMotor(motorL, 0);
+            setMotor(motorR, 0);
+            break;
         case Forward:
-        // both motors spin
+            setMotor(motorL, MOTOR_SPEED);
+            setMotor(motorR, MOTOR_SPEED);
         case TurnLeft:
+            setMotor(motorL, MOTOR_SPEED);
+            setMotor(motorR, 0);
         case TurnRight:
+            setMotor(motorL, 0);
+            setMotor(motorR, MOTOR_SPEED);
         case Backward:
-        // both motors reverse
+            setMotor(motorL, -MOTOR_SPEED);
+            setMotor(motorR, -MOTOR_SPEED);
         default:
             Serial.println("Strange bluetooth value!");
         }
     }
 };
 
+void setMotor(MotorPins motor, int power) {
+    bool positive = power >= 0;
+    digitalWrite(motor.in1, positive);
+    digitalWrite(motor.in2, !positive);
+    analogWrite(motor.en, abs(power));
+}
+
 void setup() {
-    Serial.begin(115'200);
+    Serial.begin(115200);
     BLEDevice::init("Wall");
     pServer = BLEDevice::createServer();
     pServer->setCallbacks(new ServerCallbacks());
