@@ -1,0 +1,14 @@
+---
+Language:        Cpp
+BasedOnStyle: LLVM
+AccessModifierOffset: -4
+ConstructorInitializerIndentWidth: 2
+ContinuationIndentWidth: 2
+IndentWidth:     4
+IntegerLiteralSeparator:
+  Binary:          4
+  BinaryMinDigits: 8
+  Decimal:         3
+  DecimalMinDigits: 5
+  Hex:             4
+  HexMinDigits:    8
