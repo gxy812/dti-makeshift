@@ -29,14 +29,50 @@ bool deviceConnected = false;
 bool oldDeviceConnected = false;
 
 // TODO : Generate UUIDS
-const char *SERVICE_UUID = "";
-const char *DIRECTION_CHARACTERISTIC_UUID = "";
+const char *SERVICE_UUID = "05816886-9304-4973-8176-34e49bb6dbab";
+const char *DIRECTION_CHARACTERISTIC_UUID =
+  "3210b38d-583c-4127-9bbb-a3161716dae7";
 
 const int MOTOR_SPEED = 255;
 
 enum Direction { None, Forward, TurnLeft, TurnRight, Backward };
 
 Direction movingDirection = None;
+
+void setMotor(MotorPins motor, int power) {
+    bool positive = power >= 0;
+    digitalWrite(motor.in1, positive);
+    digitalWrite(motor.in2, !positive);
+    analogWrite(motor.en, abs(power));
+}
+
+void move(Direction dir) {
+    // TODO: Motor integration and max PWM value
+    switch (dir) {
+    case None:
+        setMotor(motorL, 0);
+        setMotor(motorR, 0);
+        break;
+    case Forward:
+        setMotor(motorL, MOTOR_SPEED);
+        setMotor(motorR, MOTOR_SPEED);
+        break;
+    case TurnLeft:
+        setMotor(motorL, MOTOR_SPEED);
+        setMotor(motorR, 0);
+        break;
+    case TurnRight:
+        setMotor(motorL, 0);
+        setMotor(motorR, MOTOR_SPEED);
+        break;
+    case Backward:
+        setMotor(motorL, -MOTOR_SPEED);
+        setMotor(motorR, -MOTOR_SPEED);
+        break;
+    default:
+        Serial.println("Strange bluetooth value!");
+    }
+}
 
 class ServerCallbacks : public BLEServerCallbacks {
     void onConnect(BLEServer *_) {
@@ -57,37 +93,11 @@ class CharacteristicCallbacks : public BLECharacteristicCallbacks {
         auto value = prop->getValue();
         if (value.length() <= 0)
             return;
-        auto receivedValue = static_cast<int>(value[0]);
-        // TODO: Motor integration and max PWM value
-        switch (receivedValue) {
-        case None:
-            setMotor(motorL, 0);
-            setMotor(motorR, 0);
-            break;
-        case Forward:
-            setMotor(motorL, MOTOR_SPEED);
-            setMotor(motorR, MOTOR_SPEED);
-        case TurnLeft:
-            setMotor(motorL, MOTOR_SPEED);
-            setMotor(motorR, 0);
-        case TurnRight:
-            setMotor(motorL, 0);
-            setMotor(motorR, MOTOR_SPEED);
-        case Backward:
-            setMotor(motorL, -MOTOR_SPEED);
-            setMotor(motorR, -MOTOR_SPEED);
-        default:
-            Serial.println("Strange bluetooth value!");
-        }
+        auto receivedValue = static_cast<Direction>(value[0]);
+        move(receivedValue);
+        Serial.println(receivedValue);
     }
 };
-
-void setMotor(MotorPins motor, int power) {
-    bool positive = power >= 0;
-    digitalWrite(motor.in1, positive);
-    digitalWrite(motor.in2, !positive);
-    analogWrite(motor.en, abs(power));
-}
 
 void setup() {
     Serial.begin(115200);
@@ -108,4 +118,9 @@ void setup() {
     BLEDevice::startAdvertising();
 }
 
-void loop() {}
+void loop() {
+    static uint64_t ms_last_motor_update = 0;
+    if (millis() - ms_last_motor_update > 200) {
+        move(None);
+    }
+}
