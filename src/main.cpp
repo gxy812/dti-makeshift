@@ -22,13 +22,26 @@ struct MotorPins {
 // TODO: Pin choices
 MotorPins motorL{3, 4, 5};
 MotorPins motorR{6, 7, 8};
+const int led_R = 9;
+const int led_G = 10;
+const int led_B = 11;
+
+const int sensor_FL = 12;
+const int sensor_FR = 13;
+const int sensor_BL = 14;
+const int sensor_BR = 15;
+
+bool isBlocked_FL = false;
+bool isBlocked_FR = false;
+bool isBlocked_BL = false;
+bool isBlocked_BR = false;
 
 BLEServer *pServer = nullptr;
 BLECharacteristic *pDirectionCharacterisitic = nullptr;
 bool deviceConnected = false;
 bool oldDeviceConnected = false;
+uint64_t ms_last_motor_update = 0;
 
-// TODO : Generate UUIDS
 const char *SERVICE_UUID = "05816886-9304-4973-8176-34e49bb6dbab";
 const char *DIRECTION_CHARACTERISTIC_UUID =
   "3210b38d-583c-4127-9bbb-a3161716dae7";
@@ -39,6 +52,12 @@ enum Direction { None, Forward, TurnLeft, TurnRight, Backward };
 
 Direction movingDirection = None;
 
+void setupMotor(MotorPins motor) {
+    pinMode(motor.en, OUTPUT);
+    pinMode(motor.in1, OUTPUT);
+    pinMode(motor.in2, OUTPUT);
+}
+
 void setMotor(MotorPins motor, int power) {
     bool positive = power >= 0;
     digitalWrite(motor.in1, positive);
@@ -46,7 +65,8 @@ void setMotor(MotorPins motor, int power) {
     analogWrite(motor.en, abs(power));
 }
 
-void move(Direction dir) {
+// return error code
+int move(Direction dir) {
     // TODO: Motor integration and max PWM value
     switch (dir) {
     case None:
@@ -54,24 +74,38 @@ void move(Direction dir) {
         setMotor(motorR, 0);
         break;
     case Forward:
+        if (isBlocked_FL || isBlocked_FR) {
+            break;
+        }
         setMotor(motorL, MOTOR_SPEED);
         setMotor(motorR, MOTOR_SPEED);
         break;
     case TurnLeft:
+        if (isBlocked_FL) {
+            break;
+        }
         setMotor(motorL, MOTOR_SPEED);
         setMotor(motorR, 0);
         break;
     case TurnRight:
+        if (isBlocked_FR) {
+            break;
+        }
         setMotor(motorL, 0);
         setMotor(motorR, MOTOR_SPEED);
         break;
     case Backward:
+        if (isBlocked_BL || isBlocked_BR) {
+            break;
+        }
         setMotor(motorL, -MOTOR_SPEED);
         setMotor(motorR, -MOTOR_SPEED);
         break;
     default:
         Serial.println("Strange bluetooth value!");
+        return 1;
     }
+    return 0;
 }
 
 class ServerCallbacks : public BLEServerCallbacks {
@@ -94,12 +128,21 @@ class CharacteristicCallbacks : public BLECharacteristicCallbacks {
         if (value.length() <= 0)
             return;
         auto receivedValue = static_cast<Direction>(value[0]);
-        move(receivedValue);
+        if (!move(receivedValue)) {
+            ms_last_motor_update = millis();
+        }
         Serial.println(receivedValue);
     }
 };
 
 void setup() {
+    pinMode(sensor_FL, INPUT_PULLUP);
+    pinMode(sensor_FR, INPUT_PULLUP);
+    pinMode(sensor_BL, INPUT_PULLUP);
+    pinMode(sensor_BR, INPUT_PULLUP);
+    setupMotor(motorL);
+    setupMotor(motorR);
+
     Serial.begin(115200);
     BLEDevice::init("Wall");
     pServer = BLEDevice::createServer();
@@ -119,7 +162,11 @@ void setup() {
 }
 
 void loop() {
-    static uint64_t ms_last_motor_update = 0;
+    isBlocked_FL = digitalRead(sensor_FL);
+    isBlocked_FR = digitalRead(sensor_FR);
+    isBlocked_BL = digitalRead(sensor_BL);
+    isBlocked_BR = digitalRead(sensor_BR);
+    // stop motors after last command
     if (millis() - ms_last_motor_update > 200) {
         move(None);
     }
