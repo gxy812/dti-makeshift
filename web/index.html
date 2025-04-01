@@ -13,6 +13,15 @@
     <title>ESP32 Web BLE App</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" type="image/png" href="">
+    <style>
+        body {
+            width: 50%;
+            display: flex;
+            flex-direction: column;
+            align-content: center;
+            margin: 0 auto;
+        }
+    </style>
 </head>
 
 <body>
@@ -20,7 +29,7 @@
     <button id="connectBleButton">Connect to BLE Device</button>
     <button id="disconnectBleButton">Disconnect BLE Device</button>
     <p>BLE state: <strong><span id="bleState" style="color:#d13a30;">Disconnected</span></strong></p>
-    <div style='display: grid; grid: auto / auto; grid-template-areas: "a a" "b c" "d d";'>
+    <div style='display: grid; grid: auto / auto; grid-template-areas: ". a ." "b . c" ". d .";'>
         <button id="upButton" style="grid-area: a">Up</button>
         <button id="leftButton" style="grid-area: b">Left</button>
         <button id="rightButton" style="grid-area: c">Right</button>
