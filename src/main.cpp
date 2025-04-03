@@ -20,16 +20,16 @@ struct MotorPins {
 };
 
 // TODO: Pin choices
-MotorPins motorL{3, 4, 5};
-MotorPins motorR{6, 7, 8};
-const int led_R = 9;
-const int led_G = 10;
-const int led_B = 11;
+MotorPins motorL{15, 4, 5};
+MotorPins motorR{16, 6, 7};
+const int led_R = 1;
+const int led_G = 2;
+const int led_B = 42;
 
-const int sensor_FL = 12;
-const int sensor_FR = 13;
-const int sensor_BL = 14;
-const int sensor_BR = 15;
+const int sensor_FL = 41;
+const int sensor_FR = 40;
+const int sensor_BL = 39;
+const int sensor_BR = 38;
 
 bool isBlocked_FL = false;
 bool isBlocked_FR = false;
@@ -53,7 +53,7 @@ enum Direction { None, Forward, TurnLeft, TurnRight, Backward };
 Direction movingDirection = None;
 
 void setupMotor(MotorPins motor) {
-    pinMode(motor.en, OUTPUT);
+    // pinMode(motor.en, OUTPUT);
     pinMode(motor.in1, OUTPUT);
     pinMode(motor.in2, OUTPUT);
 }
@@ -62,7 +62,7 @@ void setMotor(MotorPins motor, int power) {
     bool positive = power >= 0;
     digitalWrite(motor.in1, positive);
     digitalWrite(motor.in2, !positive);
-    analogWrite(motor.en, abs(power));
+    // analogWrite(motor.en, abs(power));
 }
 
 // return error code
