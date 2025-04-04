@@ -56,11 +56,13 @@
     var deviceName = 'Wall';
     // TODO: Copy UUIDs from arduino side
     var bleService = "05816886-9304-4973-8176-34e49bb6dbab";
-    var ledCharacteristic = '3210b38d-583c-4127-9bbb-a3161716dae7';
+    var dirCharacteristic = '3210b38d-583c-4127-9bbb-a3161716dae7';
+    var irCharacteristic = '4b4da85c-af00-412b-ad32-dc8a4492b574';
 
     //Global Variables to Handle Bluetooth
     var bleServer;
     var bleServiceFound;
+    var irCharacteristicFound;
 
     // Connect Button (search for BLE Devices only if BLE is available)
     connectButton.addEventListener('click', (event) => {
@@ -111,6 +113,19 @@
             .then(service => {
                 bleServiceFound = service;
                 console.log("Service discovered:", service.uuid);
+                return service.getCharacteristic(irCharacteristic);
+            })
+            .then(characteristic => {
+                console.log("Characteristic discovered:", characteristic.uuid);
+                irCharacteristicFound = characteristic;
+                characteristic.addEventListener('characteristicvaluechanged', handleCharacteristicChange);
+                characteristic.startNotifications();
+                return characteristic.readValue();
+            })
+            .then(value => {
+                console.log("Read value: ", value);
+                const decodedValue = new TextDecoder().decode(value);
+                retrievedValue.innerHTML = decodedValue;
             })
             .catch(error => {
                 console.log('Error: ', error);
@@ -135,7 +150,7 @@
 
     function writeOnCharacteristic(value) {
         if (bleServer && bleServer.connected) {
-            bleServiceFound.getCharacteristic(ledCharacteristic)
+            bleServiceFound.getCharacteristic(dirCharacteristic)
                 .then(characteristic => {
                     console.log("Found the LED characteristic: ", characteristic.uuid);
                     const data = new Uint8Array([value]);
@@ -157,8 +172,8 @@
     function disconnectDevice() {
         console.log("Disconnect Device.");
         if (bleServer && bleServer.connected) {
-            if (sensorCharacteristicFound) {
-                sensorCharacteristicFound.stopNotifications()
+            if (irCharacteristicFound) {
+                irCharacteristicFound.stopNotifications()
                     .then(() => {
                         console.log("Notifications Stopped");
                         return bleServer.disconnect();
