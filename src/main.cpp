@@ -65,8 +65,8 @@ void setupMotor(MotorPins motor) {
 
 void setMotor(MotorPins motor, int power) {
     if (power == 0) {
-        digitalWrite(motor.in1, LOW);
-        digitalWrite(motor.in2, LOW);
+        digitalWrite(motor.in1, HIGH);
+        digitalWrite(motor.in2, HIGH);
         return;
     }
     bool positive = power > 0;
