@@ -19,29 +19,30 @@ struct MotorPins {
     const int in2;
 };
 
+using RGB = uint8_t[3];
+struct RGBpins {
+    const int r;
+    const int g;
+    const int b;
+    int first_channel;
+};
+
 // TODO: Pin choices
 MotorPins motorL{-1, 15, 16};
 MotorPins motorR{-1, 17, 18};
-const int led_R = 4;
-const int led_G = 5;
-const int led_B = 6;
-const int led2_R = 39;
-const int led2_G = 40;
-const int led2_B = 41;
+RGBpins led1{4, 5, 6};
+RGBpins led2{39, 40, 41};
 
-const int sensor_FL = 37;
-const int sensor_FR = 38;
-const int sensor_BL = 37;
-const int sensor_BR = 36;
+const int sensor_F = 37;
+const int sensor_B = 38;
 
-bool isBlocked_FL = false;
-bool isBlocked_FR = false;
-bool isBlocked_BL = false;
-bool isBlocked_BR = false;
+bool isBlocked_F = false;
+bool isBlocked_B = false;
 
 BLEServer *pServer = nullptr;
 BLECharacteristic *pDirectionCharacterisitic = nullptr;
 BLECharacteristic *pIRCharacterisitic = nullptr;
+BLECharacteristic *pRGBCharacterisitic = nullptr;
 bool deviceConnected = false;
 bool oldDeviceConnected = false;
 uint64_t ms_last_motor_update = 0;
@@ -50,20 +51,24 @@ const char *SERVICE_UUID = "05816886-9304-4973-8176-34e49bb6dbab";
 const char *DIRECTION_CHARACTERISTIC_UUID =
   "3210b38d-583c-4127-9bbb-a3161716dae7";
 const char *IR_CHARACTERISTIC_UUID = "4b4da85c-af00-412b-ad32-dc8a4492b574";
+const char *RGB_CHARACTERISTIC_UUID = "01d3636d-4cfb-46d8-890d-ac30f7fc5ac8";
 
 const int MOTOR_SPEED = 255;
 
 enum Direction { None, Forward, TurnLeft, TurnRight, Backward };
 
-Direction movingDirection = None;
+// MOTOR CONTROL
 
 void setupMotor(MotorPins motor) {
-    // pinMode(motor.en, OUTPUT);
     pinMode(motor.in1, OUTPUT);
     pinMode(motor.in2, OUTPUT);
 }
 
+// Control motor spin
+// Speed control not implemented
+// Can potentially change to sending PWM to direction pins for speed control
 void setMotor(MotorPins motor, int power) {
+    // Enable both directions to lock the motor in place - braking effect
     if (power == 0) {
         digitalWrite(motor.in1, HIGH);
         digitalWrite(motor.in2, HIGH);
@@ -72,7 +77,6 @@ void setMotor(MotorPins motor, int power) {
     bool positive = power > 0;
     digitalWrite(motor.in1, positive);
     digitalWrite(motor.in2, !positive);
-    // analogWrite(motor.en, abs(power));
 }
 
 // return error code
@@ -84,28 +88,22 @@ int move(Direction dir) {
         setMotor(motorR, 0);
         break;
     case Forward:
-        if (isBlocked_FL || isBlocked_FR) {
+        if (isBlocked_F) {
             break;
         }
         setMotor(motorL, MOTOR_SPEED);
         setMotor(motorR, MOTOR_SPEED);
         break;
     case TurnLeft:
-        if (isBlocked_FL) {
-            break;
-        }
         setMotor(motorL, MOTOR_SPEED);
-        setMotor(motorR, 0);
+        setMotor(motorR, -MOTOR_SPEED);
         break;
     case TurnRight:
-        if (isBlocked_FR) {
-            break;
-        }
-        setMotor(motorL, 0);
+        setMotor(motorL, -MOTOR_SPEED);
         setMotor(motorR, MOTOR_SPEED);
         break;
     case Backward:
-        if (isBlocked_BL || isBlocked_BR) {
+        if (isBlocked_B) {
             break;
         }
         setMotor(motorL, -MOTOR_SPEED);
@@ -116,6 +114,24 @@ int move(Direction dir) {
         return 1;
     }
     return 0;
+}
+
+void setupLED(RGBpins ledPins) {
+    pinMode(ledPins.r, OUTPUT);
+    pinMode(ledPins.g, OUTPUT);
+    pinMode(ledPins.b, OUTPUT);
+}
+
+void writeLED(RGBpins ledPins, RGB &values) {
+    // limit input to 8-bit
+    // analogWrite stops working when passing in inverted value with larger size
+    for (int i = 2; i >= 0; --i) {
+        values[i] = ~values[i];
+    }
+    analogWrite(ledPins.r, values[2]);
+    Serial.println(values[2], 16);
+    analogWrite(ledPins.g, values[1]);
+    analogWrite(ledPins.b, values[0]);
 }
 
 class ServerCallbacks : public BLEServerCallbacks {
@@ -132,7 +148,7 @@ class ServerCallbacks : public BLEServerCallbacks {
     }
 };
 
-class CharacteristicCallbacks : public BLECharacteristicCallbacks {
+class DirectionCallbacks : public BLECharacteristicCallbacks {
     void onWrite(BLECharacteristic *prop) {
         auto value = prop->getValue();
         if (value.length() <= 0)
@@ -145,36 +161,56 @@ class CharacteristicCallbacks : public BLECharacteristicCallbacks {
     }
 };
 
+class RGBCallbacks : public BLECharacteristicCallbacks {
+    void onWrite(BLECharacteristic *prop) {
+        // Gets array of bytes of type string
+        auto value = prop->getValue();
+        if (value.length() < 3)
+            return;
+        RGB values;
+        for (int i = 0; i < 3; ++i) {
+            auto receivedValue = static_cast<uint8_t>(value[i]);
+            Serial.println(receivedValue, 16);
+            values[i] = receivedValue;
+        }
+        writeLED(led1, values);
+        // writeLED(led2, values);
+    }
+};
+
 void setup() {
-    pinMode(sensor_FL, INPUT_PULLUP);
-    pinMode(sensor_FR, INPUT_PULLUP);
-    pinMode(sensor_BL, INPUT_PULLUP);
-    pinMode(sensor_BR, INPUT_PULLUP);
-    pinMode(led_R, OUTPUT);
-    pinMode(led_G, OUTPUT);
-    pinMode(led_B, OUTPUT);
-    pinMode(led2_R, OUTPUT);
-    pinMode(led2_G, OUTPUT);
-    pinMode(led2_B, OUTPUT);
+    pinMode(sensor_F, INPUT_PULLUP);
+    pinMode(sensor_B, INPUT_PULLUP);
+
+    setupLED(led1);
+    setupLED(led2);
 
     setupMotor(motorL);
     setupMotor(motorR);
 
     Serial.begin(115200);
+
     BLEDevice::init("Wall");
     pServer = BLEDevice::createServer();
     pServer->setCallbacks(new ServerCallbacks());
     BLEService *pService = pServer->createService(SERVICE_UUID);
     pDirectionCharacterisitic = pService->createCharacteristic(
       DIRECTION_CHARACTERISTIC_UUID, BLECharacteristic::PROPERTY_WRITE);
-    pDirectionCharacterisitic->setCallbacks(new CharacteristicCallbacks());
+    pDirectionCharacterisitic->setCallbacks(new DirectionCallbacks());
     pDirectionCharacterisitic->addDescriptor(new BLE2902());
+
     pIRCharacterisitic = pService->createCharacteristic(
       IR_CHARACTERISTIC_UUID, BLECharacteristic::PROPERTY_READ |
                                 BLECharacteristic::PROPERTY_WRITE |
                                 BLECharacteristic::PROPERTY_NOTIFY |
                                 BLECharacteristic::PROPERTY_INDICATE);
     pIRCharacterisitic->addDescriptor(new BLE2902());
+
+    pRGBCharacterisitic = pService->createCharacteristic(
+      RGB_CHARACTERISTIC_UUID, BLECharacteristic::PROPERTY_WRITE);
+    pRGBCharacterisitic->setCallbacks(new RGBCallbacks());
+    pRGBCharacterisitic->addDescriptor(new BLE2902());
+
     pService->start();
 
     BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
@@ -185,17 +221,17 @@ void setup() {
 }
 
 void loop() {
-    isBlocked_FL = !digitalRead(sensor_FL);
-    isBlocked_FR = !digitalRead(sensor_FR);
-    isBlocked_BL = !digitalRead(sensor_BL);
-    isBlocked_BR = !digitalRead(sensor_BR);
+    isBlocked_F = !digitalRead(sensor_F);
+    isBlocked_B = !digitalRead(sensor_B);
     static uint64_t ms_last_characteristic_update = 0;
     static byte r = 0;
     static byte g = 0;
     static byte b = 0;
     if (deviceConnected && millis() - ms_last_characteristic_update > 2000) {
-        pIRCharacterisitic->setValue(
-          String((byte)isBlocked_FR + (byte)isBlocked_FL).c_str());
+        byte block_flags = 0;
+        block_flags |= isBlocked_F;
+        block_flags |= (byte)isBlocked_B << 1;
+        pIRCharacterisitic->setValue(String(block_flags).c_str());
         pIRCharacterisitic->notify();
         ms_last_characteristic_update = millis();
     }
@@ -205,12 +241,8 @@ void loop() {
     }
     static uint64_t ms_last_led_update = 0;
     if (millis() - ms_last_led_update > 500) {
-        digitalWrite(led_R, r % 3 == 0);
-        digitalWrite(led_G, g % 2 == 0);
-        digitalWrite(led_B, b % 5 == 0);
-        digitalWrite(led2_R, r % 3 == 1);
-        digitalWrite(led2_G, g % 2 == 1);
-        digitalWrite(led2_B, b % 5 == 1);
+        RGB temp = {r % 128 * 2, g % 64 * 4, b % 32 * 8};
+        writeLED(led2, temp);
         r++;
         g++;
         b++;

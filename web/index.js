@@ -1,0 +1,218 @@
+'use strict'
+// DOM Elements
+const connectButton = document.getElementById('connectBleButton');
+const disconnectButton = document.getElementById('disconnectBleButton');
+const upButton = document.getElementById('upButton');
+const leftButton = document.getElementById('leftButton');
+const rightButton = document.getElementById('rightButton');
+const downButton = document.getElementById('downButton');
+const retrievedValue = document.getElementById('valueContainer');
+const bleStateContainer = document.getElementById('bleState');
+const timestampContainer = document.getElementById('timestamp');
+/** @type {HTMLInputElement} */
+const colorSelector = document.getElementById('colorSelector');
+
+//Define BLE Device Specs
+var deviceName = 'Wall';
+const bleService = "05816886-9304-4973-8176-34e49bb6dbab";
+const dirCharacteristic = '3210b38d-583c-4127-9bbb-a3161716dae7';
+const irCharacteristic = '4b4da85c-af00-412b-ad32-dc8a4492b574';
+const rgbCharacteristic = '01d3636d-4cfb-46d8-890d-ac30f7fc5ac8'; 
+
+//Global Variables to Handle Bluetooth
+var bleServer;
+var bleServiceFound;
+var irCharacteristicFound;
+
+var activeDirection = 0;
+
+// Connect Button (search for BLE Devices only if BLE is available)
+connectButton.addEventListener('click', (event) => {
+    if (isWebBluetoothEnabled()) {
+        connectToDevice();
+    }
+});
+
+// Disconnect Button
+disconnectButton.addEventListener('click', disconnectDevice);
+
+// Write to the ESP32 Direction Characteristic
+upButton.addEventListener('mousedown', () => startDirection(1));
+leftButton.addEventListener('mousedown', () => startDirection(2));
+rightButton.addEventListener('mousedown', () => startDirection(3));
+downButton.addEventListener('mousedown', () => startDirection(4));
+upButton.addEventListener('mouseup', stopDirection);
+leftButton.addEventListener('mouseup', stopDirection);
+rightButton.addEventListener('mouseup', stopDirection);
+downButton.addEventListener('mouseup', stopDirection);
+colorSelector.addEventListener('change', sendColor);
+
+function startDirection(direction) {
+    activeDirection = setInterval(() => {
+        sendDirection(direction);
+    }, 200)
+}
+
+function stopDirection() {
+    clearInterval(activeDirection);
+}
+
+// Check if BLE is available in your Browser
+function isWebBluetoothEnabled() {
+    if (!navigator.bluetooth) {
+        console.log("Web Bluetooth API is not available in this browser!");
+        bleStateContainer.innerHTML = "Web Bluetooth API is not available in this browser!";
+        return false
+    }
+    console.log('Web Bluetooth API supported in this browser.');
+    return true
+}
+
+// Connect to BLE Device and Enable Notifications
+function connectToDevice() {
+    console.log('Initializing Bluetooth...');
+    let foundDevice = "";
+    navigator.bluetooth.requestDevice({
+        filters: [{ name: deviceName }],
+        optionalServices: [bleService]
+    })
+        .then(device => {
+            console.log('Device Selected:', device.name);
+            foundDevice = device.name;
+            bleStateContainer.innerHTML = 'Connecting to device ' + device.name + '. Please wait.';
+            bleStateContainer.style.color = "#af6a24";
+            device.addEventListener('gattserverdisconnected', onDisconnected);
+            return device.gatt.connect();
+        })
+        .then(gattServer => {
+            bleServer = gattServer;
+            console.log("Connected to GATT Server");
+            return bleServer.getPrimaryService(bleService);
+        })
+        .then(service => {
+            bleServiceFound = service;
+            console.log("Service discovered:", service.uuid);
+            return service.getCharacteristic(irCharacteristic);
+        })
+        .then(characteristic => {
+            console.log("Characteristic discovered:", characteristic.uuid);
+            irCharacteristicFound = characteristic;
+            characteristic.addEventListener('characteristicvaluechanged', handleCharacteristicChange);
+            characteristic.startNotifications();
+            return characteristic.readValue();
+        })
+        .then(value => {
+            console.log("Read value: ", value);
+            const decodedValue = new TextDecoder().decode(value);
+            retrievedValue.innerHTML = decodedValue;
+            bleStateContainer.innerHTML = 'Connected to device ' + foundDevice;
+            bleStateContainer.style.color = "#24af37";
+            disconnectButton.hidden = false;
+            connectButton.hidden = true;
+        })
+        .catch(error => {
+            console.log('Error: ', error);
+        })
+}
+
+function onDisconnected(event) {
+    console.log('Device Disconnected:', event.target.device?.name);
+    bleStateContainer.innerHTML = "Device disconnected";
+    bleStateContainer.style.color = "#d13a30";
+    disconnectButton.hidden = true;
+    connectButton.hidden = false;
+
+    connectToDevice();
+}
+
+function blockFlagsToText(flags) {
+    const front = flags & 0b01;
+    const back = flags & 0b10;
+    let text = "";
+    if (front) {
+        text += "Front is blocked.\n";
+    }
+    if (back) {
+        text += "Back is blocked.\n";
+    }
+    return text;
+}
+
+function handleCharacteristicChange(event) {
+    const newValueReceived = new TextDecoder().decode(event.target.value);
+    console.log("Characteristic value changed: ", newValueReceived);
+    retrievedValue.innerHTML = blockFlagsToText(newValueReceived);
+}
+
+function sendDirection(value) {
+    if (!bleServer || !bleServer.connected) {
+        console.error("Bluetooth is not connected. Cannot write to characteristic.")
+        window.alert("Bluetooth is not connected. Cannot write to characteristic. \n Connect to BLE first!")
+        return;
+    }
+    bleServiceFound.getCharacteristic(dirCharacteristic)
+        .then(characteristic => {
+            console.log("Found the direction characteristic: ", characteristic.uuid);
+            const data = new Uint8Array([value]);
+            return characteristic.writeValueWithoutResponse(data);
+        })
+        .then(() => {
+            // latestValueSent.innerHTML = value;
+            console.log("Value written to direction:", value);
+        })
+        .catch(error => {
+            console.error("Error writing to the direction characteristic: ", error);
+        });
+}
+
+/** 
+ * @param {Event} event
+*/
+function sendColor(event) {
+    if (!bleServer || !bleServer.connected) {
+        console.error("Bluetooth is not connected. Cannot write to characteristic.")
+        window.alert("Bluetooth is not connected. Cannot write to characteristic. \n Connect to BLE first!")
+        return;
+    }
+    let value = event.target.value.slice(1);
+    value = parseInt(value, 16);
+    bleServiceFound.getCharacteristic(rgbCharacteristic)
+        .then(characteristic => {
+            console.log("Found the color characteristic: ", characteristic.uuid);
+            const data = new Uint32Array([value]);
+            return characteristic.writeValueWithoutResponse(data);
+        })
+        .then(() => {
+            // latestValueSent.innerHTML = value;
+            console.log("Value written to color:", value.toString(16));
+        })
+        .catch(error => {
+            console.error("Error writing to the color characteristic: ", error);
+        });
+}
+
+function disconnectDevice() {
+    console.log("Disconnect Device.");
+    if (!bleServer || !bleServer.connected) {
+        // Throw an error if Bluetooth is not connected
+        console.error("Bluetooth is not connected.");
+        window.alert("Bluetooth is not connected.")
+        return;
+    }
+    if (!irCharacteristicFound) {
+        console.log("No characteristic found to disconnect.");
+        return;
+    }
+    irCharacteristicFound.stopNotifications()
+        .then(() => {
+            console.log("Notifications Stopped");
+            return bleServer.disconnect();
+        })
+        .then(() => {
+            console.log("Device Disconnected");
+        })
+        .catch(error => {
+            console.log("An error occurred:", error);
+        });
+}
+
