@@ -19,7 +19,7 @@ struct MotorPins {
     const int in2;
 };
 
-using RGB = uint8_t[3];
+using BGR = uint8_t[3];
 struct RGBpins {
     const int r;
     const int g;
@@ -122,14 +122,13 @@ void setupLED(RGBpins ledPins) {
     pinMode(ledPins.b, OUTPUT);
 }
 
-void writeLED(RGBpins ledPins, RGB &values) {
+void writeLED(RGBpins ledPins, BGR &values) {
     // limit input to 8-bit
     // analogWrite stops working when passing in inverted value with larger size
     for (int i = 2; i >= 0; --i) {
         values[i] = ~values[i];
     }
     analogWrite(ledPins.r, values[2]);
-    Serial.println(values[2], 16);
     analogWrite(ledPins.g, values[1]);
     analogWrite(ledPins.b, values[0]);
 }
@@ -167,14 +166,16 @@ class RGBCallbacks : public BLECharacteristicCallbacks {
         auto value = prop->getValue();
         if (value.length() < 3)
             return;
-        RGB values;
+        BGR values;
+        BGR antivalues;
         for (int i = 0; i < 3; ++i) {
             auto receivedValue = static_cast<uint8_t>(value[i]);
             Serial.println(receivedValue, 16);
             values[i] = receivedValue;
+            antivalues[i] = ~receivedValue;
         }
         writeLED(led1, values);
-        // writeLED(led2, values);
+        writeLED(led2, antivalues);
     }
 };
 
@@ -238,14 +239,5 @@ void loop() {
     // stop motors after last command
     if (millis() - ms_last_motor_update > 500) {
         move(None);
-    }
-    static uint64_t ms_last_led_update = 0;
-    if (millis() - ms_last_led_update > 500) {
-        RGB temp = {r % 128 * 2, g % 64 * 4, b % 32 * 8};
-        writeLED(led2, temp);
-        r++;
-        g++;
-        b++;
-        ms_last_led_update = millis();
     }
 }
