@@ -12,29 +12,24 @@
 #include <BLEDevice.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
+#include <FastLED.h>
+
+const uint8_t NUM_LEDS = 19;
 
 struct MotorPins {
-    const int en;
-    const int in1;
-    const int in2;
-};
-
-using BGR = uint8_t[3];
-struct RGBpins {
-    const int r;
-    const int g;
-    const int b;
-    int first_channel;
+    const uint8_t in1;
+    const uint8_t in2;
 };
 
 // TODO: Pin choices
-MotorPins motorL{-1, 15, 16};
-MotorPins motorR{-1, 17, 18};
-RGBpins led1{4, 5, 6};
-RGBpins led2{39, 40, 41};
+MotorPins motorL{15, 16};
+MotorPins motorR{17, 18};
 
-const int sensor_F = 37;
-const int sensor_B = 38;
+const uint8_t LED_DATA = 4;
+CRGB *leds;
+
+const uint8_t sensor_F = 5;
+const uint8_t sensor_B = 6;
 
 bool isBlocked_F = false;
 bool isBlocked_B = false;
@@ -116,23 +111,6 @@ int move(Direction dir) {
     return 0;
 }
 
-void setupLED(RGBpins ledPins) {
-    pinMode(ledPins.r, OUTPUT);
-    pinMode(ledPins.g, OUTPUT);
-    pinMode(ledPins.b, OUTPUT);
-}
-
-void writeLED(RGBpins ledPins, BGR &values) {
-    // limit input to 8-bit
-    // analogWrite stops working when passing in inverted value with larger size
-    for (int i = 2; i >= 0; --i) {
-        values[i] = ~values[i];
-    }
-    analogWrite(ledPins.r, values[2]);
-    analogWrite(ledPins.g, values[1]);
-    analogWrite(ledPins.b, values[0]);
-}
-
 class ServerCallbacks : public BLEServerCallbacks {
     void onConnect(BLEServer *_) {
         deviceConnected = true;
@@ -166,16 +144,19 @@ class RGBCallbacks : public BLECharacteristicCallbacks {
         auto value = prop->getValue();
         if (value.length() < 3)
             return;
-        BGR values;
-        BGR antivalues;
+        uint32_t color = 0;
         for (int i = 0; i < 3; ++i) {
-            auto receivedValue = static_cast<uint8_t>(value[i]);
+            auto receivedValue = static_cast<uint32_t>(value[i]);
             Serial.println(receivedValue, 16);
-            values[i] = receivedValue;
-            antivalues[i] = ~receivedValue;
+            for (int j = 0; j < i; ++j) {
+                receivedValue <<= 8;
+            }
+            color |= receivedValue;
         }
-        writeLED(led1, values);
-        writeLED(led2, antivalues);
+        Serial.println(color, 16);
+        for (int i = 0; i < NUM_LEDS; ++i) {
+            leds[i].setColorCode(color);
+        }
     }
 };
 
@@ -183,11 +164,13 @@ void setup() {
     pinMode(sensor_F, INPUT_PULLUP);
     pinMode(sensor_B, INPUT_PULLUP);
 
-    setupLED(led1);
-    setupLED(led2);
-
     setupMotor(motorL);
     setupMotor(motorR);
+    leds = new CRGB[NUM_LEDS];
+    FastLED.addLeds<NEOPIXEL, 4>(leds, NUM_LEDS);
+    for (int i = 0; i < NUM_LEDS; i++) {
+        leds[i].setColorCode(0x7F7F7F);
+    }
 
     Serial.begin(115200);
 
@@ -225,9 +208,6 @@ void loop() {
     isBlocked_F = !digitalRead(sensor_F);
     isBlocked_B = !digitalRead(sensor_B);
     static uint64_t ms_last_characteristic_update = 0;
-    static byte r = 0;
-    static byte g = 0;
-    static byte b = 0;
     if (deviceConnected && millis() - ms_last_characteristic_update > 2000) {
         byte block_flags = 0;
         block_flags |= isBlocked_F;
@@ -240,4 +220,5 @@ void loop() {
     if (millis() - ms_last_motor_update > 500) {
         move(None);
     }
+    FastLED.show();
 }
