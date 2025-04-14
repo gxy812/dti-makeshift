@@ -41,10 +41,18 @@ upButton.addEventListener('mousedown', () => startDirection(1));
 leftButton.addEventListener('mousedown', () => startDirection(2));
 rightButton.addEventListener('mousedown', () => startDirection(3));
 downButton.addEventListener('mousedown', () => startDirection(4));
+upButton.addEventListener('touchstart', () => startDirection(1));
+leftButton.addEventListener('touchstart', () => startDirection(2));
+rightButton.addEventListener('touchstart', () => startDirection(3));
+downButton.addEventListener('touchstart', () => startDirection(4));
 upButton.addEventListener('mouseup', stopDirection);
 leftButton.addEventListener('mouseup', stopDirection);
 rightButton.addEventListener('mouseup', stopDirection);
 downButton.addEventListener('mouseup', stopDirection);
+upButton.addEventListener('touchend', stopDirection);
+leftButton.addEventListener('touchend', stopDirection);
+rightButton.addEventListener('touchend', stopDirection);
+downButton.addEventListener('touchend', stopDirection);
 colorSelector.addEventListener('change', sendColor);
 
 function startDirection(direction) {
@@ -73,7 +81,7 @@ function connectToDevice() {
     console.log('Initializing Bluetooth...');
     let foundDevice = "";
     navigator.bluetooth.requestDevice({
-        filters: [{ name: deviceName }],
+        filters: [{ namePrefix: deviceName }],
         optionalServices: [bleService]
     })
         .then(device => {
@@ -81,6 +89,7 @@ function connectToDevice() {
             foundDevice = device.name;
             bleStateContainer.innerHTML = 'Connecting to device ' + device.name + '. Please wait.';
             bleStateContainer.style.color = "#af6a24";
+            bleStateContainer.className = "loader";
             device.addEventListener('gattserverdisconnected', onDisconnected);
             return device.gatt.connect();
         })
@@ -107,6 +116,7 @@ function connectToDevice() {
             retrievedValue.innerHTML = decodedValue;
             bleStateContainer.innerHTML = 'Connected to device ' + foundDevice;
             bleStateContainer.style.color = "#24af37";
+            bleStateContainer.className = "";
             disconnectButton.hidden = false;
             connectButton.hidden = true;
         })
@@ -199,6 +209,7 @@ function disconnectDevice() {
         window.alert("Bluetooth is not connected.")
         return;
     }
+    clearInterval(activeDirection);
     if (!irCharacteristicFound) {
         console.log("No characteristic found to disconnect.");
         return;
