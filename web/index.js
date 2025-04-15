@@ -2,6 +2,7 @@
 // DOM Elements
 const connectButton = document.getElementById('connectBleButton');
 const disconnectButton = document.getElementById('disconnectBleButton');
+const stopButton = document.getElementById('stopButton');
 const upButton = document.getElementById('upButton');
 const leftButton = document.getElementById('leftButton');
 const rightButton = document.getElementById('rightButton');
@@ -37,6 +38,7 @@ connectButton.addEventListener('click', (event) => {
 disconnectButton.addEventListener('click', disconnectDevice);
 
 // Write to the ESP32 Direction Characteristic
+stopButton.addEventListener('mousedown', () => sendDirection(0));
 upButton.addEventListener('mousedown', () => startDirection(1));
 leftButton.addEventListener('mousedown', () => startDirection(2));
 rightButton.addEventListener('mousedown', () => startDirection(3));
@@ -139,11 +141,15 @@ function blockFlagsToText(flags) {
     const front = flags & 0b01;
     const back = flags & 0b10;
     let text = "";
+    upButton.hidden = false;
+    downButton.hidden = false;
     if (front) {
         text += "Front is blocked.\n";
+        upButton.hidden = true;
     }
     if (back) {
         text += "Back is blocked.\n";
+        downButton.hidden = true;
     }
     return text;
 }
@@ -158,6 +164,7 @@ function sendDirection(value) {
     if (!bleServer || !bleServer.connected) {
         console.error("Bluetooth is not connected. Cannot write to characteristic.")
         window.alert("Bluetooth is not connected. Cannot write to characteristic. \n Connect to BLE first!")
+        stopDirection();
         return;
     }
     bleServiceFound.getCharacteristic(dirCharacteristic)
@@ -167,7 +174,6 @@ function sendDirection(value) {
             return characteristic.writeValueWithoutResponse(data);
         })
         .then(() => {
-            // latestValueSent.innerHTML = value;
             console.log("Value written to direction:", value);
         })
         .catch(error => {
@@ -209,7 +215,7 @@ function disconnectDevice() {
         window.alert("Bluetooth is not connected.")
         return;
     }
-    clearInterval(activeDirection);
+    stopDirection();
     if (!irCharacteristicFound) {
         console.log("No characteristic found to disconnect.");
         return;

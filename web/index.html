@@ -17,15 +17,16 @@
 </head>
 
 <body>
-    <h1>ESP32 Web BLE Application</h1>
+    <h1>Wall Control App</h1>
     <button id="connectBleButton">Connect to BLE Device</button>
     <button id="disconnectBleButton" hidden>Disconnect BLE Device</button>
     <p>BLE state: <strong><span id="bleState" style="color:#d13a30;">Disconnected</span></strong></p>
-    <div style='display: grid; grid: auto / auto; grid-template-areas: ". a ." "b . c" ". d .";'>
-        <button id="upButton" style="grid-area: a">Forward</button>
-        <button id="leftButton" style="grid-area: b">Left</button>
-        <button id="rightButton" style="grid-area: c">Right</button>
-        <button id="downButton" style="grid-area: d">Back</button>
+    <div id="buttonContainer">
+        <button id="upButton" class="dirButton" style="grid-area: a">Forward</button>
+        <button id="leftButton" class="dirButton" style="grid-area: b">Left</button>
+        <button id="rightButton" class="dirButton" style="grid-area: c">Right</button>
+        <button id="downButton" class="dirButton" style="grid-area: d">Back</button>
+        <button id="stopButton" class="dirButton" style="grid-area: s">Stop</button>
     </div>
     <p>Directions blocked: <span id="valueContainer"></span></p>
     <p>

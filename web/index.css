@@ -3,13 +3,14 @@ UI is my passion
 */
 
 body {
-    width: 50%;
+    width: 80%;
     display: flex;
     flex-direction: column;
     align-content: center;
     margin: 0 auto;
     font-family: sans-serif;
     font-size: 20px;
+    min-width: 300px;
 }
 
 button {
@@ -28,6 +29,12 @@ button:hover {
     background-color: #FFFFFF;
     color: #000000;
     border: 2px solid #4CAF50;
+}
+
+#buttonContainer {
+    display: grid;
+    grid: auto / auto;
+    grid-template-areas: ". a ." "b s c" ". d .";
 }
 
 #connectBleButton {
@@ -58,6 +65,11 @@ button:hover {
     color: #FFFFFF;
 }
 
+.dirButton {
+    width: 7em;
+    margin: 0.5em auto;
+}
+
 .loader::after {
     width: 48px;
     height: 48px;
@@ -81,4 +93,5 @@ button:hover {
 
 footer {
     font-size: xx-small;
+    visibility: hidden;
 }
