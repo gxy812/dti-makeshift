@@ -38,23 +38,23 @@ connectButton.addEventListener('click', (event) => {
 disconnectButton.addEventListener('click', disconnectDevice);
 
 // Write to the ESP32 Direction Characteristic
-stopButton.addEventListener('mousedown', () => sendDirection(0));
-upButton.addEventListener('mousedown', () => startDirection(1));
-leftButton.addEventListener('mousedown', () => startDirection(2));
-rightButton.addEventListener('mousedown', () => startDirection(3));
-downButton.addEventListener('mousedown', () => startDirection(4));
-upButton.addEventListener('touchstart', () => startDirection(1));
-leftButton.addEventListener('touchstart', () => startDirection(2));
-rightButton.addEventListener('touchstart', () => startDirection(3));
-downButton.addEventListener('touchstart', () => startDirection(4));
-upButton.addEventListener('mouseup', stopDirection);
-leftButton.addEventListener('mouseup', stopDirection);
-rightButton.addEventListener('mouseup', stopDirection);
-downButton.addEventListener('mouseup', stopDirection);
-upButton.addEventListener('touchend', stopDirection);
-leftButton.addEventListener('touchend', stopDirection);
-rightButton.addEventListener('touchend', stopDirection);
-downButton.addEventListener('touchend', stopDirection);
+stopButton.addEventListener('mousedown', () => {
+    stopDirection();
+    sendDirection(0);
+});
+
+['mousedown', 'touchstart'].forEach((eventtype) => {
+    upButton.addEventListener(eventtype, () => startDirection(1));
+    leftButton.addEventListener(eventtype, () => startDirection(2));
+    rightButton.addEventListener(eventtype, () => startDirection(3));
+    downButton.addEventListener(eventtype, () => startDirection(4));
+});
+['mouseup', 'touchend', 'touchcancel'].forEach((eventtype) => {
+    upButton.addEventListener(eventtype, stopDirection);
+    leftButton.addEventListener(eventtype, stopDirection);
+    rightButton.addEventListener(eventtype, stopDirection);
+    downButton.addEventListener(eventtype, stopDirection);
+});
 colorSelector.addEventListener('change', sendColor);
 
 function startDirection(direction) {
@@ -72,10 +72,10 @@ function isWebBluetoothEnabled() {
     if (!navigator.bluetooth) {
         console.log("Web Bluetooth API is not available in this browser!");
         bleStateContainer.innerHTML = "Web Bluetooth API is not available in this browser!";
-        return false
+        return false;
     }
     console.log('Web Bluetooth API supported in this browser.');
-    return true
+    return true;
 }
 
 // Connect to BLE Device and Enable Notifications
@@ -162,9 +162,9 @@ function handleCharacteristicChange(event) {
 
 function sendDirection(value) {
     if (!bleServer || !bleServer.connected) {
+        stopDirection();
         console.error("Bluetooth is not connected. Cannot write to characteristic.")
         window.alert("Bluetooth is not connected. Cannot write to characteristic. \n Connect to BLE first!")
-        stopDirection();
         return;
     }
     bleServiceFound.getCharacteristic(dirCharacteristic)
@@ -177,6 +177,7 @@ function sendDirection(value) {
             console.log("Value written to direction:", value);
         })
         .catch(error => {
+            stopDirection();
             console.error("Error writing to the direction characteristic: ", error);
         });
 }
