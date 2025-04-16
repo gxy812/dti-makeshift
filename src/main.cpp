@@ -70,8 +70,13 @@ void setMotor(MotorPins motor, int power) {
         return;
     }
     bool positive = power > 0;
-    digitalWrite(motor.in1, positive);
-    digitalWrite(motor.in2, !positive);
+    if (positive) {
+        analogWrite(motor.in1, power);
+        digitalWrite(motor.in2, 0);
+    } else {
+        digitalWrite(motor.in1, 0);
+        analogWrite(motor.in2, power);
+    }
 }
 
 // return error code

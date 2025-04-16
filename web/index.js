@@ -25,7 +25,8 @@ var bleServer;
 var bleServiceFound;
 var irCharacteristicFound;
 
-var activeDirection = 0;
+var activeDirection;
+var oldvalue = 0;
 
 // Connect Button (search for BLE Devices only if BLE is available)
 connectButton.addEventListener('click', (event) => {
@@ -58,9 +59,9 @@ stopButton.addEventListener('mousedown', () => {
 colorSelector.addEventListener('change', sendColor);
 
 function startDirection(direction) {
-    activeDirection = setInterval(() => {
+    activeDirection.push(setInterval(() => {
         sendDirection(direction);
-    }, 200)
+    }, 200));
 }
 
 function stopDirection() {
@@ -161,6 +162,10 @@ function handleCharacteristicChange(event) {
 }
 
 function sendDirection(value) {
+    if (value != oldvalue) {
+        oldvalue = value;
+        stopDirection();
+    }
     if (!bleServer || !bleServer.connected) {
         stopDirection();
         console.error("Bluetooth is not connected. Cannot write to characteristic.")
