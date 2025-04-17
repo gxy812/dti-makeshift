@@ -14,7 +14,7 @@
 #include <BLEUtils.h>
 #include <FastLED.h>
 
-const uint8_t NUM_LEDS = 19;
+const uint8_t NUM_LEDS = 18;
 
 struct MotorPins {
     const uint8_t in1;
@@ -48,7 +48,7 @@ const char *DIRECTION_CHARACTERISTIC_UUID =
 const char *IR_CHARACTERISTIC_UUID = "4b4da85c-af00-412b-ad32-dc8a4492b574";
 const char *RGB_CHARACTERISTIC_UUID = "01d3636d-4cfb-46d8-890d-ac30f7fc5ac8";
 
-const int MOTOR_SPEED = 255;
+const int MOTOR_SPEED = 0xFF;
 
 enum Direction { None, Forward, TurnLeft, TurnRight, Backward };
 
@@ -65,16 +65,16 @@ void setupMotor(MotorPins motor) {
 void setMotor(MotorPins motor, int power) {
     // Enable both directions to lock the motor in place - braking effect
     if (power == 0) {
-        digitalWrite(motor.in1, HIGH);
-        digitalWrite(motor.in2, HIGH);
+        analogWrite(motor.in1, 0xFF);
+        analogWrite(motor.in2, 0xFF);
         return;
     }
     bool positive = power > 0;
     if (positive) {
-        analogWrite(motor.in1, power);
-        digitalWrite(motor.in2, 0);
+        analogWrite(motor.in1, -power);
+        analogWrite(motor.in2, 0);
     } else {
-        digitalWrite(motor.in1, 0);
+        analogWrite(motor.in1, 0);
         analogWrite(motor.in2, power);
     }
 }
@@ -96,18 +96,18 @@ int move(Direction dir) {
         break;
     case TurnLeft:
         setMotor(motorL, MOTOR_SPEED);
-        setMotor(motorR, -MOTOR_SPEED);
+        setMotor(motorR, MOTOR_SPEED / 4);
         break;
     case TurnRight:
-        setMotor(motorL, -MOTOR_SPEED);
+        setMotor(motorL, MOTOR_SPEED / 4);
         setMotor(motorR, MOTOR_SPEED);
         break;
     case Backward:
         if (isBlocked_B) {
             break;
         }
-        setMotor(motorL, -MOTOR_SPEED);
-        setMotor(motorR, -MOTOR_SPEED);
+        setMotor(motorL, -MOTOR_SPEED * 3 / 4);
+        setMotor(motorR, -MOTOR_SPEED * 3 / 4);
         break;
     default:
         Serial.println("Strange bluetooth value!");

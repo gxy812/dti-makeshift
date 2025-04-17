@@ -59,9 +59,9 @@ stopButton.addEventListener('mousedown', () => {
 colorSelector.addEventListener('change', sendColor);
 
 function startDirection(direction) {
-    activeDirection.push(setInterval(() => {
+    activeDirection = setInterval(() => {
         sendDirection(direction);
-    }, 200));
+    }, 200);
 }
 
 function stopDirection() {
@@ -104,6 +104,11 @@ function connectToDevice() {
         .then(service => {
             bleServiceFound = service;
             console.log("Service discovered:", service.uuid);
+            bleStateContainer.innerHTML = 'Connected to device ' + foundDevice;
+            bleStateContainer.style.color = "#24af37";
+            bleStateContainer.className = "";
+            disconnectButton.hidden = false;
+            connectButton.hidden = true;
             return service.getCharacteristic(irCharacteristic);
         })
         .then(characteristic => {
@@ -117,11 +122,6 @@ function connectToDevice() {
             console.log("Read value: ", value);
             const decodedValue = new TextDecoder().decode(value);
             retrievedValue.innerHTML = decodedValue;
-            bleStateContainer.innerHTML = 'Connected to device ' + foundDevice;
-            bleStateContainer.style.color = "#24af37";
-            bleStateContainer.className = "";
-            disconnectButton.hidden = false;
-            connectButton.hidden = true;
         })
         .catch(error => {
             console.log('Error: ', error);
@@ -129,6 +129,7 @@ function connectToDevice() {
 }
 
 function onDisconnected(event) {
+    stopDirection();
     console.log('Device Disconnected:', event.target.device?.name);
     bleStateContainer.innerHTML = "Device disconnected";
     bleStateContainer.style.color = "#d13a30";
@@ -221,7 +222,6 @@ function disconnectDevice() {
         window.alert("Bluetooth is not connected.")
         return;
     }
-    stopDirection();
     if (!irCharacteristicFound) {
         console.log("No characteristic found to disconnect.");
         return;
