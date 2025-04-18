@@ -91,10 +91,10 @@ int move(Direction dir) {
         break;
     case TurnLeft:
         setMotor(motorL, MOTOR_SPEED);
-        setMotor(motorR, 0xF0);
+        setMotor(motorR, -0xF0);
         break;
     case TurnRight:
-        setMotor(motorL, 0xF0);
+        setMotor(motorL, -0xF0);
         setMotor(motorR, MOTOR_SPEED);
         break;
     case Backward:
