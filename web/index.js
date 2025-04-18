@@ -39,16 +39,16 @@ connectButton.addEventListener('click', (event) => {
 disconnectButton.addEventListener('click', disconnectDevice);
 
 // Write to the ESP32 Direction Characteristic
-stopButton.addEventListener('mousedown', () => {
-    stopDirection();
-    sendDirection(0);
-});
 
 ['mousedown', 'touchstart'].forEach((eventtype) => {
     upButton.addEventListener(eventtype, () => startDirection(1));
     leftButton.addEventListener(eventtype, () => startDirection(2));
     rightButton.addEventListener(eventtype, () => startDirection(3));
     downButton.addEventListener(eventtype, () => startDirection(4));
+    stopButton.addEventListener(eventtype, () => {
+        stopDirection();
+        sendDirection(0);
+    });
 });
 ['mouseup', 'touchend', 'touchcancel'].forEach((eventtype) => {
     upButton.addEventListener(eventtype, stopDirection);
@@ -59,13 +59,23 @@ stopButton.addEventListener('mousedown', () => {
 colorSelector.addEventListener('change', sendColor);
 
 function startDirection(direction) {
+    stopDirection();
+    if (!bleServer || !bleServer.connected) {
+        stopDirection();
+        console.error("Bluetooth is not connected. Cannot write to characteristic.")
+        window.alert("Bluetooth is not connected. Cannot write to characteristic. \n Connect to BLE first!")
+        return;
+    }
     activeDirection = setInterval(() => {
         sendDirection(direction);
     }, 200);
 }
 
 function stopDirection() {
-    clearInterval(activeDirection);
+    if (activeDirection) {
+        clearInterval(activeDirection);
+        activeDirection = null;
+    }
 }
 
 // Check if BLE is available in your Browser
@@ -163,14 +173,10 @@ function handleCharacteristicChange(event) {
 }
 
 function sendDirection(value) {
-    if (value != oldvalue) {
-        oldvalue = value;
-        stopDirection();
-    }
+    // do not create error popups here - inevitably some commands will sneak through after disconnection
     if (!bleServer || !bleServer.connected) {
         stopDirection();
         console.error("Bluetooth is not connected. Cannot write to characteristic.")
-        window.alert("Bluetooth is not connected. Cannot write to characteristic. \n Connect to BLE first!")
         return;
     }
     bleServiceFound.getCharacteristic(dirCharacteristic)
