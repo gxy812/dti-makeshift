@@ -22,8 +22,8 @@ struct MotorPins {
 };
 
 // TODO: Pin choices
-MotorPins motorL{15, 16};
-MotorPins motorR{17, 18};
+MotorPins motorR{15, 16};
+MotorPins motorL{17, 18};
 
 const uint8_t LED_DATA = 4;
 CRGB *leds;
@@ -90,12 +90,12 @@ int move(Direction dir) {
         setMotor(motorR, MOTOR_SPEED);
         break;
     case TurnLeft:
-        setMotor(motorL, MOTOR_SPEED);
-        setMotor(motorR, -0xF0);
+        setMotor(motorL, -MOTOR_SPEED);
+        setMotor(motorR, MOTOR_SPEED);
         break;
     case TurnRight:
-        setMotor(motorL, -0xF0);
-        setMotor(motorR, MOTOR_SPEED);
+        setMotor(motorL, MOTOR_SPEED);
+        setMotor(motorR, -MOTOR_SPEED);
         break;
     case Backward:
         if (isBlocked_B) {
