@@ -62,21 +62,16 @@ void setupMotor(MotorPins motor) {
 // Control motor spin
 // Speed control not implemented
 // Can potentially change to sending PWM to direction pins for speed control
-void setMotor(MotorPins motor, int power) {
+void setMotor(MotorPins motor, int16_t power) {
     // Enable both directions to lock the motor in place - braking effect
     if (power == 0) {
-        analogWrite(motor.in1, 0xFF);
-        analogWrite(motor.in2, 0xFF);
+        digitalWrite(motor.in1, HIGH);
+        digitalWrite(motor.in2, HIGH);
         return;
     }
     bool positive = power > 0;
-    if (positive) {
-        analogWrite(motor.in1, -power);
-        analogWrite(motor.in2, 0);
-    } else {
-        analogWrite(motor.in1, 0);
-        analogWrite(motor.in2, power);
-    }
+    digitalWrite(motor.in1, positive);
+    digitalWrite(motor.in2, !positive);
 }
 
 // return error code
@@ -96,18 +91,18 @@ int move(Direction dir) {
         break;
     case TurnLeft:
         setMotor(motorL, MOTOR_SPEED);
-        setMotor(motorR, MOTOR_SPEED / 4);
+        setMotor(motorR, 0xF0);
         break;
     case TurnRight:
-        setMotor(motorL, MOTOR_SPEED / 4);
+        setMotor(motorL, 0xF0);
         setMotor(motorR, MOTOR_SPEED);
         break;
     case Backward:
         if (isBlocked_B) {
             break;
         }
-        setMotor(motorL, -MOTOR_SPEED * 3 / 4);
-        setMotor(motorR, -MOTOR_SPEED * 3 / 4);
+        setMotor(motorL, -0xF0);
+        setMotor(motorR, -0xF0);
         break;
     default:
         Serial.println("Strange bluetooth value!");
