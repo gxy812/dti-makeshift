@@ -61,10 +61,15 @@ colorSelector.addEventListener('change', sendColor);
 function startDirection(direction) {
     stopDirection();
     if (!bleServer || !bleServer.connected) {
-        stopDirection();
         console.error("Bluetooth is not connected. Cannot write to characteristic.")
         window.alert("Bluetooth is not connected. Cannot write to characteristic. \n Connect to BLE first!")
         return;
+    }
+    switch (direction) {
+        case 2:
+        case 3:
+            sendDirection(1);
+            break;
     }
     activeDirection = setInterval(() => {
         sendDirection(direction);

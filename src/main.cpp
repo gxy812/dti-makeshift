@@ -41,6 +41,8 @@ BLECharacteristic *pRGBCharacterisitic = nullptr;
 bool deviceConnected = false;
 bool oldDeviceConnected = false;
 uint64_t ms_last_motor_update = 0;
+uint64_t ms_last_blocked_f = 0;
+uint64_t ms_last_blocked_b = 0;
 
 const char *SERVICE_UUID = "05816886-9304-4973-8176-34e49bb6dbab";
 const char *DIRECTION_CHARACTERISTIC_UUID =
@@ -76,14 +78,15 @@ void setMotor(MotorPins motor, int16_t power) {
 
 // return error code
 int move(Direction dir) {
-    // TODO: Motor integration and max PWM value
     switch (dir) {
     case None:
         setMotor(motorL, 0);
         setMotor(motorR, 0);
         break;
     case Forward:
-        if (isBlocked_F) {
+        if (millis() - ms_last_blocked_f < 500) {
+            setMotor(motorL, 0);
+            setMotor(motorR, 0);
             break;
         }
         setMotor(motorL, MOTOR_SPEED);
@@ -98,7 +101,9 @@ int move(Direction dir) {
         setMotor(motorR, -MOTOR_SPEED);
         break;
     case Backward:
-        if (isBlocked_B) {
+        if (millis() - ms_last_blocked_b < 500) {
+            setMotor(motorL, 0);
+            setMotor(motorR, 0);
             break;
         }
         setMotor(motorL, -0xF0);
@@ -207,6 +212,12 @@ void setup() {
 void loop() {
     isBlocked_F = !digitalRead(sensor_F);
     isBlocked_B = !digitalRead(sensor_B);
+    if (isBlocked_F) {
+        ms_last_blocked_f = millis();
+    }
+    if (isBlocked_B) {
+        ms_last_blocked_b = millis();
+    }
     static uint64_t ms_last_characteristic_update = 0;
     if (deviceConnected && millis() - ms_last_characteristic_update > 2000) {
         byte block_flags = 0;
