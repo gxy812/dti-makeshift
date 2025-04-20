@@ -3,14 +3,14 @@ UI is my passion
 */
 
 body {
-    width: 80%;
+    max-width: 80%;
     display: flex;
     flex-direction: column;
     align-content: center;
     margin: 0 auto;
     font-family: sans-serif;
     font-size: 20px;
-    min-width: 300px;
+    min-width: 200px;
 }
 
 button {
@@ -66,7 +66,9 @@ button:hover {
 }
 
 .dirButton {
-    width: 7em;
+    width: 9em;
+    text-align: center;
+    font-size: xx-small;
     margin: 0.5em auto;
     user-select: none;
 }
