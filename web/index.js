@@ -62,7 +62,7 @@ function startDirection(direction) {
     stopDirection();
     if (!bleServer || !bleServer.connected) {
         console.error("Bluetooth is not connected. Cannot write to characteristic.")
-        window.alert("Bluetooth is not connected. Cannot write to characteristic. \n Connect to BLE first!")
+        window.alert("Bluetooth is not connected.\n Connect to BLE first!")
         return;
     }
     switch (direction) {
@@ -230,7 +230,7 @@ function disconnectDevice() {
     if (!bleServer || !bleServer.connected) {
         // Throw an error if Bluetooth is not connected
         console.error("Bluetooth is not connected.");
-        window.alert("Bluetooth is not connected.")
+        window.alert("Bluetooth is not connected.");
         return;
     }
     if (!irCharacteristicFound) {
