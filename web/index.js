@@ -18,7 +18,7 @@ var deviceName = 'Wall';
 const bleService = "05816886-9304-4973-8176-34e49bb6dbab";
 const dirCharacteristic = '3210b38d-583c-4127-9bbb-a3161716dae7';
 const irCharacteristic = '4b4da85c-af00-412b-ad32-dc8a4492b574';
-const rgbCharacteristic = '01d3636d-4cfb-46d8-890d-ac30f7fc5ac8'; 
+const rgbCharacteristic = '01d3636d-4cfb-46d8-890d-ac30f7fc5ac8';
 
 //Global Variables to Handle Bluetooth
 var bleServer;
@@ -56,7 +56,7 @@ disconnectButton.addEventListener('click', disconnectDevice);
     rightButton.addEventListener(eventtype, stopDirection);
     downButton.addEventListener(eventtype, stopDirection);
 });
-colorSelector.addEventListener('change', sendColor);
+colorSelector.addEventListener('input', sendColor);
 
 function startDirection(direction) {
     stopDirection();
@@ -250,3 +250,28 @@ function disconnectDevice() {
         });
 }
 
+// Utility function
+async function colorCycle() {
+    let r = 0;
+    let g = 0;
+    let b = 0;
+    while (true) {
+        for (let i = 0; i <= Math.PI; i += Math.PI * 0.01) {
+            let value = 0;
+            r = Math.cos(i) * 255;
+            g = Math.cos(i - Math.PI / 2) * 255;
+            b = Math.cos(i - Math.PI) * 255;
+            r = Math.floor(Math.max(0, r));
+            g = Math.floor(Math.max(0, g));
+            b = Math.floor(Math.max(0, b));
+            value |= r << 16;
+            value |= g << 8;
+            value |= b;
+            value = value.toString(16).padStart(6, 0);
+            value = '#' + value;
+            colorSelector.value = value;
+            colorSelector.dispatchEvent(new Event('input'));
+            await new Promise(resolve => setTimeout(resolve, 40));
+        }
+    }
+}
