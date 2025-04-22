@@ -10,6 +10,7 @@ const downButton = document.getElementById('downButton');
 const retrievedValue = document.getElementById('valueContainer');
 const bleStateContainer = document.getElementById('bleState');
 const timestampContainer = document.getElementById('timestamp');
+const colorCycleButton = document.getElementById('colorCycler');
 /** @type {HTMLInputElement} */
 const colorSelector = document.getElementById('colorSelector');
 
@@ -37,6 +38,7 @@ connectButton.addEventListener('click', (event) => {
 
 // Disconnect Button
 disconnectButton.addEventListener('click', disconnectDevice);
+colorCycleButton.addEventListener('click', colorCycle);
 
 // Write to the ESP32 Direction Characteristic
 
@@ -256,7 +258,7 @@ async function colorCycle() {
     let g = 0;
     let b = 0;
     while (true) {
-        for (let i = 0; i <= Math.PI; i += Math.PI * 0.01) {
+        for (let i = 0; i <= Math.PI; i += Math.PI * 0.005) {
             let value = 0;
             r = Math.cos(i) * 255;
             g = Math.cos(i - Math.PI / 2) * 255;
